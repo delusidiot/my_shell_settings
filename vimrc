@@ -34,4 +34,4 @@ let g:airline#extensions#tabline#formatter='unique_tail'
 set updatetime=100
 
 nmap <C-b> <C-w>
-nmap <F9> :NERDTree<cr>
+nmap <F9> :NERDTreeToggle<cr>
