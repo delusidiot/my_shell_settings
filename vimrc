@@ -32,6 +32,10 @@ let g:airline#extensions#tabline#buffer_nr_show=1
 let g:airline_powerline_fonts = 1
 let g:airline#extensions#tabline#formatter='unique_tail'
 
+" yaml editing setting
+syntax on
+autocmd FileType yaml setlocal ts=2 sts=2 sw=2 expandtab autoindent
+
 " git
 set updatetime=100
 
