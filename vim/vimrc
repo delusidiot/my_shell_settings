@@ -1,0 +1,194 @@
+" ============================================================================
+"  vimrc  (Linux / macOS / Windows 공용)
+"  https://github.com/delusidiot/my_shell_settings
+" ============================================================================
+
+" ---------------------------------------------------------------------------
+"  0. OS별 경로
+"     - Linux/macOS : ~/.vim
+"     - Windows     : ~/vimfiles
+" ---------------------------------------------------------------------------
+set nocompatible
+let s:is_win  = has('win32') || has('win64')
+let s:vimdir  = s:is_win ? expand('~/vimfiles') : expand('~/.vim')
+let s:plugvim = s:vimdir . '/autoload/plug.vim'
+
+" Nerd Font가 없는 터미널에서 아이콘/화살표가 깨지면 셸 설정에
+"   export VIM_NO_NERD_FONT=1
+" 을 추가하세요. (SSH 접속 시 폰트는 '접속하는 쪽' 터미널 기준입니다)
+let g:use_nerd_font = empty($VIM_NO_NERD_FONT)
+
+" ---------------------------------------------------------------------------
+"  1. vim-plug 자동 설치 (처음 실행 시 plug.vim이 없으면 내려받고 PlugInstall)
+" ---------------------------------------------------------------------------
+if empty(glob(s:plugvim)) && executable('curl')
+  silent execute '!curl -fsSLo ' . shellescape(s:plugvim) . ' --create-dirs '
+        \ . 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+  if filereadable(s:plugvim)
+    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+  endif
+endif
+
+" ---------------------------------------------------------------------------
+"  2. 플러그인
+"     plug#end()가 'filetype plugin indent on'과 'syntax enable'을 자동 실행합니다.
+" ---------------------------------------------------------------------------
+if filereadable(s:plugvim)
+  call plug#begin(s:vimdir . '/plugged')
+  Plug 'preservim/nerdtree'
+  Plug 'Xuyuanp/nerdtree-git-plugin'
+  Plug 'morhetz/gruvbox'
+  Plug 'vim-airline/vim-airline'
+  Plug 'vim-airline/vim-airline-themes'
+  Plug 'tpope/vim-fugitive'
+  Plug 'mhinz/vim-signify'
+  if g:use_nerd_font
+    Plug 'ryanoasis/vim-devicons'      " 반드시 마지막에 로드
+  endif
+  call plug#end()
+else
+  " plug.vim을 받지 못한 환경(오프라인 등)에서도 기본 설정은 동작하도록
+  filetype plugin indent on
+  syntax enable
+endif
+
+" ---------------------------------------------------------------------------
+"  3. 기본 설정
+" ---------------------------------------------------------------------------
+set encoding=utf-8
+scriptencoding utf-8
+set fileencodings=utf-8,cp949,euc-kr,latin1   " 한글(cp949) 파일도 깨지지 않게
+set fileformats=unix,dos
+
+set number                  " 줄 번호
+set ruler                   " 커서 위치
+set cursorline              " 현재 줄 강조
+set showcmd
+set laststatus=2            " airline 항상 표시
+set noshowmode              " 모드 표시는 airline이 대신 함
+set scrolloff=5             " 커서 위아래 여백
+set signcolumn=yes          " git 표시줄 고정 (화면 흔들림 방지)
+set wildmenu
+set wildmode=longest:full,full
+set showmatch               " 괄호 짝 표시
+set backspace=indent,eol,start
+set hidden                  " 저장 안 한 버퍼도 전환 가능
+set mouse=a                 " 터미널 기본 드래그 복사는 Shift+드래그
+set belloff=all
+set updatetime=100          " vim-signify 반응 속도
+set ttimeoutlen=50          " ESC 반응 지연 줄이기
+
+" 검색
+set hlsearch
+set incsearch
+set ignorecase
+set smartcase               " 대문자가 섞이면 대소문자 구분
+
+" 들여쓰기 기본값: 공백 4칸 (파일 타입별 예외는 아래 7번)
+" smartindent는 filetype indent와 충돌해서 제거했습니다.
+set autoindent
+set expandtab
+set tabstop=4
+set softtabstop=4
+set shiftwidth=4
+
+" 공백 문자 보이기 (:set list 로 켜고 :set nolist 로 끄기)
+set listchars=tab:»\ ,trail:·,extends:>,precedes:<,nbsp:+
+
+" 스왑/백업/undo 파일을 한곳에 모으기 (작업 폴더가 지저분해지지 않게)
+for s:d in ['swap', 'backup', 'undo']
+  if !isdirectory(s:vimdir . '/' . s:d)
+    call mkdir(s:vimdir . '/' . s:d, 'p')
+  endif
+endfor
+let &directory = s:vimdir . '/swap//'
+let &backupdir = s:vimdir . '/backup//'
+let &undodir   = s:vimdir . '/undo//'
+set undofile                " 파일을 닫았다 열어도 undo 가능
+
+" 시스템 클립보드 (clipboard 기능이 있는 vim에서만)
+if has('clipboard')
+  set clipboard^=unnamed,unnamedplus
+endif
+
+" ---------------------------------------------------------------------------
+"  4. 테마
+" ---------------------------------------------------------------------------
+set background=dark
+if has('termguicolors') && ($COLORTERM ==# 'truecolor' || $COLORTERM ==# '24bit' || $WT_SESSION !=# '')
+  set termguicolors         " Windows Terminal 등 트루컬러 터미널
+else
+  set t_Co=256
+endif
+let g:gruvbox_contrast_dark = 'medium'
+silent! colorscheme gruvbox " 플러그인 설치 전 첫 실행에도 에러 안 나게
+
+" ---------------------------------------------------------------------------
+"  5. 플러그인 설정
+" ---------------------------------------------------------------------------
+" airline
+let g:airline_theme = 'violet'
+let g:airline_powerline_fonts = g:use_nerd_font
+let g:airline#extensions#tabline#enabled = 1
+let g:airline#extensions#tabline#buffer_nr_show = 1
+let g:airline#extensions#tabline#formatter = 'unique_tail'
+
+" NERDTree
+let g:NERDTreeShowHidden = 1
+let g:NERDTreeIgnore = ['\.git$', '\.swp$', '^target$', '^node_modules$', '__pycache__']
+" 마지막 남은 창이 NERDTree면 vim 종료
+autocmd BufEnter * if winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() | quit | endif
+
+" ---------------------------------------------------------------------------
+"  6. 키 매핑
+" ---------------------------------------------------------------------------
+let mapleader = ' '
+
+" <C-b> 를 창 이동 prefix(<C-w>)로 사용  예) <C-b>h, <C-b>l
+nnoremap <C-b> <C-w>
+nnoremap <silent> <F9> :NERDTreeToggle<CR>
+nnoremap <silent> <leader>n :NERDTreeFind<CR>
+
+" 버퍼(탭라인) 이동
+nnoremap <silent> <leader>] :bnext<CR>
+nnoremap <silent> <leader>[ :bprevious<CR>
+nnoremap <silent> <leader>q :bdelete<CR>
+
+" 검색 하이라이트 끄기
+nnoremap <silent> <leader>h :nohlsearch<CR>
+
+" 줄 번호 상대/절대 전환
+nnoremap <silent> <leader>r :set relativenumber!<CR>
+
+" ---------------------------------------------------------------------------
+"  7. 파일 타입별 설정
+" ---------------------------------------------------------------------------
+augroup my_filetypes
+  autocmd!
+  " YAML / JSON / 웹 / Terraform: 2칸
+  autocmd FileType yaml,json,html,css,scss,javascript,typescript,javascriptreact,typescriptreact,vue,terraform,hcl
+        \ setlocal ts=2 sts=2 sw=2 expandtab
+  " C/C++ : 탭 문자 (42 norminette 스타일)
+  autocmd FileType c,cpp setlocal ts=4 sts=4 sw=4 noexpandtab
+  " Makefile, Go: 반드시 탭
+  autocmd FileType make,go setlocal noexpandtab
+  " Rust, Python, Java: 4칸 공백 (기본값과 같지만 명시)
+  autocmd FileType rust,python,java setlocal ts=4 sts=4 sw=4 expandtab
+  " Git 커밋 메시지: 72자 줄바꿈 + 맞춤법
+  autocmd FileType gitcommit setlocal textwidth=72 spell
+augroup END
+
+" 파일을 다시 열면 마지막 커서 위치로 이동
+autocmd BufReadPost *
+      \ if line("'\"") >= 1 && line("'\"") <= line('$') && &ft !~# 'commit'
+      \ | exe "normal! g`\"" | endif
+
+" ---------------------------------------------------------------------------
+"  8. 개인 설정 (선택)
+"     기계마다 다른 설정은 ~/.vimrc.local (Windows: ~/_vimrc.local) 에 두면
+"     이 파일을 고치지 않고도 덮어쓸 수 있습니다.  예) set relativenumber
+" ---------------------------------------------------------------------------
+let s:local = expand(s:is_win ? '~/_vimrc.local' : '~/.vimrc.local')
+if filereadable(s:local)
+  execute 'source' fnameescape(s:local)
+endif
